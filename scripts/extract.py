@@ -7,7 +7,9 @@ from datetime import datetime
 load_dotenv()
 API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY")
 
-def get_stock_data(symbol="AAPL"):
+TICKERS = ["AAPL", "MSFT", "GOOGL", "AMZN", "TSLA"]
+
+def get_stock_data(symbol):
     url = "https://www.alphavantage.co/query"
 
     params = {
@@ -19,8 +21,7 @@ def get_stock_data(symbol="AAPL"):
     response = requests.get(url, params=params)
     data = response.json()
 
-    time_series = data["Time Series (Daily)"]
-
+    time_series = data.get("Time Series (Daily)", {})
     records = []
 
     for date, values in time_series.items():
@@ -35,10 +36,19 @@ def get_stock_data(symbol="AAPL"):
             "extracted_at": datetime.now()
         })
 
-    df = pd.DataFrame(records)
-    return df
+    return pd.DataFrame(records)
 
 if __name__ == "__main__":
-    df = get_stock_data("AAPL")
-    df.to_csv("data/raw_stock_data.csv", index=False)
-    print("Stock data extracted!")
+    all_data = []
+
+    for ticker in TICKERS:
+        print(f"Fetching {ticker}...")
+        df = get_stock_data(ticker)
+        all_data.append(df)
+
+    final_df = pd.concat(all_data, ignore_index=True)
+
+    os.makedirs("data", exist_ok=True)
+    final_df.to_csv("data/raw_stock_data.csv", index=False)
+
+    print("Multi-stock data extracted!")
